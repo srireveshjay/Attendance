@@ -15,16 +15,15 @@
 body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;}
 
 /* ── SCREENS ── */
-.screen{display:none;min-height:100vh;}
-.screen.active{display:block;}
+.screen{display:none;min-height:100vh;flex-direction:column;}
+.screen.active{display:flex;}
 
-/* ══════════════════════════════════════
-   LOGIN SCREEN
-══════════════════════════════════════ */
-#screen-login{
-  display:flex;flex-direction:column;align-items:center;justify-content:center;
-  min-height:100vh;padding:24px;
-}
+/* LOGIN needs centered layout */
+#screen-login.active{align-items:center;justify-content:center;padding:24px;}
+
+/* faculty/student fill full height column */
+#screen-faculty.active,#screen-student.active{align-items:stretch;}
+
 .login-card{
   background:var(--surface);border:1px solid var(--border);border-radius:16px;
   padding:40px 36px;width:100%;max-width:420px;
@@ -60,7 +59,7 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
 .login-hint{font-size:.74rem;color:var(--muted);text-align:center;margin-top:14px;line-height:1.5;}
 
 /* ══════════════════════════════════════
-   FACULTY DASHBOARD (unchanged from before)
+   FACULTY DASHBOARD
 ══════════════════════════════════════ */
 #screen-faculty header{
   background:linear-gradient(135deg,#1a1d27 0%,#252836 100%);
@@ -172,7 +171,6 @@ tbody td{padding:9px 12px;}
   font-size:.82rem;color:#fbbf24;display:none;
 }
 
-/* student attendance table (read-only) */
 .stu-table-wrap{overflow-x:auto;padding:0 24px 24px;}
 .stu-table-wrap h3{font-size:.85rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;}
 table.stu-tbl{width:100%;border-collapse:collapse;font-size:.84rem;min-width:360px;}
@@ -186,18 +184,16 @@ table.stu-tbl tbody td{padding:9px 12px;}
 .pill-OD{background:#451a03;color:var(--od);}
 .pill-none{background:var(--surface2);color:var(--muted);}
 
-/* progress bar */
 .pbar-wrap{margin:0 24px 20px;}
 .pbar-wrap label{font-size:.75rem;color:var(--muted);font-weight:600;display:flex;justify-content:space-between;margin-bottom:6px;}
 .pbar{height:8px;background:var(--surface2);border-radius:10px;overflow:hidden;}
 .pbar-fill{height:100%;border-radius:10px;transition:width .5s ease;background:linear-gradient(90deg,#6c63ff,#22c55e);}
 .pbar-fill.danger{background:linear-gradient(90deg,#ef4444,#f59e0b);}
 
-/* TOAST */
 #toast{position:fixed;bottom:22px;right:22px;background:var(--surface2);border:1px solid var(--accent);border-radius:10px;padding:11px 18px;font-size:.83rem;color:var(--accent2);opacity:0;pointer-events:none;transform:translateY(8px);transition:all .22s;z-index:999;}
 #toast.show{opacity:1;transform:translateY(0);}
 
-footer{text-align:center;padding:14px;font-size:.7rem;color:var(--muted);border-top:1px solid var(--border);}
+footer{text-align:center;padding:14px;font-size:.7rem;color:var(--muted);border-top:1px solid var(--border);margin-top:auto;}
 
 @media(max-width:620px){
   .controls,.stats-bar{padding:10px 10px;}
@@ -210,9 +206,7 @@ footer{text-align:center;padding:14px;font-size:.7rem;color:var(--muted);border-
 </head>
 <body>
 
-<!-- ══════════════════════════════════════
-     SCREEN 1: LOGIN
-══════════════════════════════════════ -->
+<!-- SCREEN 1: LOGIN -->
 <div id="screen-login" class="screen active">
   <div class="login-card">
     <div class="login-logo">
@@ -226,7 +220,6 @@ footer{text-align:center;padding:14px;font-size:.7rem;color:var(--muted);border-
       <button class="role-btn" id="role-student-btn" onclick="setRole('student')">👤 Student</button>
     </div>
 
-    <!-- FACULTY FIELDS -->
     <div id="faculty-fields">
       <div class="form-group">
         <label>Password</label>
@@ -234,7 +227,6 @@ footer{text-align:center;padding:14px;font-size:.7rem;color:var(--muted);border-
       </div>
     </div>
 
-    <!-- STUDENT FIELDS -->
     <div id="student-fields" style="display:none">
       <div class="form-group">
         <label>Section</label>
@@ -260,9 +252,7 @@ footer{text-align:center;padding:14px;font-size:.7rem;color:var(--muted);border-
   </div>
 </div>
 
-<!-- ══════════════════════════════════════
-     SCREEN 2: FACULTY DASHBOARD
-══════════════════════════════════════ -->
+<!-- SCREEN 2: FACULTY DASHBOARD -->
 <div id="screen-faculty" class="screen">
   <header>
     <div>
@@ -320,9 +310,7 @@ footer{text-align:center;padding:14px;font-size:.7rem;color:var(--muted);border-
   <footer>Faculty view · Full edit access · © 2025 Amrita CSE</footer>
 </div>
 
-<!-- ══════════════════════════════════════
-     SCREEN 3: STUDENT DASHBOARD
-══════════════════════════════════════ -->
+<!-- SCREEN 3: STUDENT DASHBOARD -->
 <div id="screen-student" class="screen">
   <header>
     <div>
@@ -379,9 +367,6 @@ footer{text-align:center;padding:14px;font-size:.7rem;color:var(--muted);border-
 <div id="toast"></div>
 
 <script>
-// ─────────────────────────────────────────
-// ⚠ CHANGE THIS PASSWORD — it's stored in the HTML
-// ─────────────────────────────────────────
 const FACULTY_PASSWORD = "eshwar@amrita2025";
 
 const SCHEDULE = {
@@ -518,11 +503,9 @@ const SECTIONS = {
   ]}
 };
 
-// ─── STATE ────────────────────────────────────
-let activeRole = null; // 'faculty' | 'student'
+let activeRole = null;
 let loggedInRoll = null;
 let loggedInSection = null;
-
 let activeSection = "H";
 let dbs = {
   H: JSON.parse(localStorage.getItem(SECTIONS.H.lsKey)||"{}"),
@@ -532,13 +515,11 @@ let currentDate = "";
 let current = {};
 let filterText = "";
 
-// ─── SCREEN HELPERS ────────────────────────────
 function showScreen(id){
   document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
   document.getElementById(id).classList.add("active");
 }
 
-// ─── LOGIN ROLE TOGGLE ─────────────────────────
 function setRole(r){
   document.getElementById("role-faculty-btn").classList.toggle("active", r==="faculty");
   document.getElementById("role-student-btn").classList.toggle("active", r==="student");
@@ -547,7 +528,6 @@ function setRole(r){
   document.getElementById("login-error").style.display = "none";
 }
 
-// ─── LOGIN ─────────────────────────────────────
 function doLogin(){
   const isFaculty = document.getElementById("role-faculty-btn").classList.contains("active");
   const errEl = document.getElementById("login-error");
@@ -572,7 +552,6 @@ function doLogin(){
     if(!roll){ errEl.textContent="Please enter your roll number."; errEl.style.display="block"; return; }
     if(!SECTIONS[sec]){ errEl.textContent="Invalid section."; errEl.style.display="block"; return; }
 
-    // find student
     const student = SECTIONS[sec].students.find(s=>s[1].toUpperCase()===roll);
     if(!student){ errEl.textContent="Roll number not found in selected section."; errEl.style.display="block"; return; }
     if(pw !== roll){ errEl.textContent="Incorrect password. Your password is your roll number."; errEl.style.display="block"; return; }
@@ -596,7 +575,6 @@ function logout(){
   showScreen("screen-login");
 }
 
-// ─── FACULTY INIT ──────────────────────────────
 function initFaculty(){
   const dp = document.getElementById("date-picker");
   if(!dp._initDone){
@@ -747,21 +725,16 @@ function exportExcel(){
   toast("📥 Excel exported!");
 }
 
-// ─── STUDENT DASHBOARD ─────────────────────────
 function renderStudentDashboard(student, sec){
   const [sno, roll, name, gender] = student;
   const secLabel = SECTIONS[sec].label;
 
-  // Update header chip
   document.getElementById("stu-chip").textContent = "👤 " + name.split(" ")[0];
-
-  // Profile
   document.getElementById("stu-avatar").textContent = name.trim()[0].toUpperCase();
   document.getElementById("stu-fullname").textContent = name;
   document.getElementById("stu-seclabel").textContent = secLabel + " · " + (gender==="Female"?"Female":"Male");
   document.getElementById("stu-roll-display").textContent = roll;
 
-  // Reload db fresh (in case it was updated by faculty earlier this session)
   const db = JSON.parse(localStorage.getItem(SECTIONS[sec].lsKey)||"{}");
   const dates = Object.keys(db).sort();
 
@@ -779,7 +752,6 @@ function renderStudentDashboard(student, sec){
     rows.push({d, fmtd:fmtDate(d), dayName, session, status, idx:i+1});
   });
 
-  // Summary cards
   document.getElementById("sc-held").textContent   = held;
   document.getElementById("sc-present").textContent = p;
   document.getElementById("sc-absent").textContent  = a;
@@ -787,17 +759,14 @@ function renderStudentDashboard(student, sec){
   const pct = held>0 ? ((p/held)*100).toFixed(1) : null;
   document.getElementById("sc-pct").textContent     = pct ? pct+"%" : "—";
 
-  // Progress bar
   const fill = document.getElementById("pbar-fill");
   document.getElementById("pbar-label").textContent = pct ? pct+"%" : "—";
   fill.style.width = pct ? Math.min(pct,100)+"%" : "0%";
   fill.classList.toggle("danger", pct!==null && parseFloat(pct)<75);
 
-  // Warning
   const warn = document.getElementById("att-warning");
   warn.style.display = (pct!==null && parseFloat(pct)<75) ? "" : "none";
 
-  // Table
   const tbody = document.getElementById("stu-att-tbody");
   tbody.innerHTML = "";
   document.getElementById("stu-no-data").style.display = rows.length?"none":"";
@@ -815,7 +784,6 @@ function renderStudentDashboard(student, sec){
   });
 }
 
-// ─── UTILS ─────────────────────────────────────
 function fmtDate(iso){
   const [y,m,d]=iso.split("-");
   const months=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
