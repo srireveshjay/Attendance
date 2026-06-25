@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Attendance – CB.SC.U4CSE25</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #252836;
+    --border: #2e3247;
+    --accent: #6c63ff;
+    --accent2: #a78bfa;
+    --present: #22c55e;
+    --absent: #ef4444;
+    --od: #f59e0b;
+    --text: #e2e8f0;
+    --muted: #64748b;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; min-height: 100vh; }
+
+  /* HEADER */
+  header {
+    background: linear-gradient(135deg, #1a1d27 0%, #252836 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 24px;
+    display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;
+  }
+  header h1 { font-size: 1.15rem; font-weight: 700; color: var(--accent2); letter-spacing: .5px; }
+  header p { font-size: .75rem; color: var(--muted); margin-top: 2px; }
+
+  /* SECTION TABS */
+  .section-tabs {
+    display: flex; gap: 0; background: var(--surface); border-bottom: 2px solid var(--border);
+    padding: 0 24px;
+  }
+  .tab-btn {
+    padding: 13px 28px; font-size: .9rem; font-weight: 600; cursor: pointer;
+    background: transparent; border: none; color: var(--muted);
+    border-bottom: 3px solid transparent; margin-bottom: -2px;
+    transition: color .15s, border-color .15s;
+    letter-spacing: .3px;
+  }
+  .tab-btn:hover { color: var(--accent2); }
+  .tab-btn.active { color: var(--accent2); border-bottom-color: var(--accent); }
+  .tab-btn .badge {
+    display: inline-block; background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 10px; padding: 1px 8px; font-size: .7rem; margin-left: 6px; color: var(--muted);
+  }
+
+  /* STATS */
+  .stats-bar {
+    display: flex; gap: 12px; flex-wrap: wrap;
+    padding: 10px 24px; background: var(--surface); border-bottom: 1px solid var(--border);
+    align-items: center;
+  }
+  .stat { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 6px 14px; text-align: center; }
+  .stat .n { font-size: 1.25rem; font-weight: 700; }
+  .stat .l { font-size: .68rem; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
+  .stat .n.p { color: var(--present); }
+  .stat .n.a { color: var(--absent); }
+  .stat .n.o { color: var(--od); }
+
+  /* CONTROLS */
+  .controls {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    padding: 12px 24px; background: var(--surface); border-bottom: 1px solid var(--border);
+  }
+  .controls label { font-size: .82rem; color: var(--muted); white-space: nowrap; }
+  input[type="date"], input[type="text"] {
+    background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+    border-radius: 8px; padding: 7px 12px; font-size: .84rem; outline: none; cursor: pointer;
+  }
+  input[type="date"]:focus, input[type="text"]:focus { border-color: var(--accent); }
+  input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(1); }
+  input[type="text"] { width: 180px; cursor: text; }
+  .session-badge {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 7px 12px; font-size: .78rem; color: var(--accent2); white-space: nowrap;
+  }
+  .warn-badge {
+    padding: 7px 12px; background: #451a03; border: 1px solid #92400e;
+    border-radius: 8px; font-size: .78rem; color: #fbbf24; display: none;
+  }
+  .spacer { flex: 1; }
+  .btn {
+    border: none; border-radius: 8px; padding: 8px 15px; font-size: .83rem;
+    font-weight: 600; cursor: pointer; transition: opacity .15s; white-space: nowrap;
+  }
+  .btn:hover { opacity: .85; }
+  .btn-accent { background: var(--accent); color: #fff; }
+  .btn-green { background: var(--present); color: #fff; }
+  .btn-red { background: var(--absent); color: #fff; }
+  .btn-export { background: linear-gradient(135deg, #6c63ff, #a78bfa); color: #fff; }
+
+  /* HISTORY BAR */
+  .history-bar {
+    background: var(--surface); border-bottom: 1px solid var(--border);
+    padding: 8px 24px; display: flex; gap: 7px; flex-wrap: wrap; align-items: center;
+    min-height: 42px;
+  }
+  .history-bar > .hlabel { font-size: .73rem; color: var(--muted); white-space: nowrap; }
+  .no-sess { font-size: .74rem; color: var(--muted); }
+  .date-chip {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 20px; padding: 3px 11px; font-size: .74rem; cursor: pointer;
+    color: var(--text); transition: border-color .1s;
+    display: flex; align-items: center; gap: 5px;
+  }
+  .date-chip:hover { border-color: var(--accent2); }
+  .date-chip.active { border-color: var(--accent); color: var(--accent2); }
+  .date-chip .del { color: var(--muted); font-size: .88rem; line-height: 1; }
+  .date-chip .del:hover { color: var(--absent); }
+
+  /* TABLE */
+  .table-wrap { overflow-x: auto; padding: 14px 24px; }
+  table { width: 100%; border-collapse: collapse; font-size: .85rem; min-width: 520px; }
+  thead th {
+    background: var(--surface2); color: var(--muted); font-size: .7rem; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .6px; padding: 10px 12px; text-align: left;
+    position: sticky; top: 0; z-index: 2;
+  }
+  tbody tr { border-bottom: 1px solid var(--border); transition: background .1s; }
+  tbody tr:hover { background: var(--surface2); }
+  tbody td { padding: 9px 12px; }
+  .roll { color: var(--muted); font-size: .76rem; font-family: monospace; }
+  .name { font-weight: 500; }
+  .gender { font-size: .74rem; color: var(--muted); }
+  .att-toggle { display: flex; gap: 4px; }
+  .att-btn {
+    border: 1.5px solid; border-radius: 6px; padding: 4px 11px; font-size: .76rem;
+    font-weight: 600; cursor: pointer; background: transparent; transition: all .12s;
+  }
+  .att-btn.P { border-color: var(--present); color: var(--present); }
+  .att-btn.P.active { background: var(--present); color: #fff; }
+  .att-btn.A { border-color: var(--absent); color: var(--absent); }
+  .att-btn.A.active { background: var(--absent); color: #fff; }
+  .att-btn.OD { border-color: var(--od); color: var(--od); }
+  .att-btn.OD.active { background: var(--od); color: #fff; }
+
+  /* TOAST */
+  #toast {
+    position: fixed; bottom: 22px; right: 22px; background: var(--surface2);
+    border: 1px solid var(--accent); border-radius: 10px; padding: 11px 18px;
+    font-size: .84rem; color: var(--accent2); opacity: 0; pointer-events: none;
+    transform: translateY(8px); transition: all .22s; z-index: 999;
+  }
+  #toast.show { opacity: 1; transform: translateY(0); }
+
+  footer { text-align: center; padding: 16px; font-size: .72rem; color: var(--muted); border-top: 1px solid var(--border); margin-top: 6px; }
+
+  @media (max-width: 620px) {
+    .controls, .stats-bar { padding: 10px 10px; }
+    .table-wrap { padding: 8px 4px; }
+    header, .section-tabs, .history-bar { padding-left: 12px; padding-right: 12px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>📋 Attendance Register — CB.SC.U4CSE25</h1>
+    <p>Department of CSE · Amrita Vishwa Vidyapeetham, Coimbatore</p>
+  </div>
+</header>
+
+<!-- SECTION TABS -->
+<div class="section-tabs">
+  <button class="tab-btn active" id="tab-H" onclick="switchSection('H')">
+    Section H <span class="badge">61</span>
+  </button>
+  <button class="tab-btn" id="tab-B" onclick="switchSection('B')">
+    Section B <span class="badge">60</span>
+  </button>
+</div>
+
+<!-- STATS -->
+<div class="stats-bar">
+  <div class="stat"><div class="n" id="s-total">61</div><div class="l">Students</div></div>
+  <div class="stat"><div class="n p" id="s-present">0</div><div class="l">Present</div></div>
+  <div class="stat"><div class="n a" id="s-absent">0</div><div class="l">Absent</div></div>
+  <div class="stat"><div class="n o" id="s-od">0</div><div class="l">OD</div></div>
+  <div class="spacer"></div>
+  <span style="font-size:.75rem;color:var(--muted)" id="section-label">Section H</span>
+</div>
+
+<!-- CONTROLS -->
+<div class="controls">
+  <label>Date</label>
+  <input type="date" id="date-picker"/>
+  <span id="session-badge" class="session-badge">Select a date</span>
+  <span id="no-class-warn" class="warn-badge">⚠ No class scheduled</span>
+  <div class="spacer"></div>
+  <input type="text" id="search" placeholder="🔍 Search student…"/>
+  <button class="btn btn-green" onclick="markAll('P')">✓ All Present</button>
+  <button class="btn btn-red" onclick="markAll('A')">✗ All Absent</button>
+  <button class="btn btn-accent" onclick="saveSession()">💾 Save</button>
+  <button class="btn btn-export" onclick="exportExcel()">📥 Export Excel</button>
+</div>
+
+<!-- HISTORY -->
+<div class="history-bar" id="history-bar">
+  <span class="hlabel">Sessions:</span>
+  <span class="no-sess" id="no-sessions">No saved sessions yet.</span>
+</div>
+
+<!-- TABLE -->
+<div class="table-wrap">
+<table>
+  <thead>
+    <tr>
+      <th style="width:40px">#</th>
+      <th>Roll Number</th>
+      <th>Name</th>
+      <th style="width:66px">Gender</th>
+      <th>Attendance</th>
+    </tr>
+  </thead>
+  <tbody id="student-tbody"></tbody>
+</table>
+</div>
+
+<footer>Data stored in browser localStorage · Separate records per section · Export to Excel at any time · © 2025 Amrita CSE</footer>
+<div id="toast"></div>
+
+<script>
+// ─── STUDENT DATA ───────────────────────────────
+const SECTIONS = {
+  H: {
+    label: "Section H",
+    lsKey: "cse25H_attendance",
+    students: [
+      [1,"CB.SC.U4CSE25701","A Aashika","Female"],
+      [2,"CB.SC.U4CSE25702","Abhijal C A","Male"],
+      [3,"CB.SC.U4CSE25703","Abhiram Rajeev","Male"],
+      [4,"CB.SC.U4CSE25704","Akilan T","Male"],
+      [5,"CB.SC.U4CSE25705","Amirtharaji Periasamy","Female"],
+      [6,"CB.SC.U4CSE25706","Anirudh L","Male"],
+      [7,"CB.SC.U4CSE25707","Bekkem Yogeswara Reddy","Male"],
+      [8,"CB.SC.U4CSE25709","Dayitha Dileep","Female"],
+      [9,"CB.SC.U4CSE25710","Devika Baiju","Female"],
+      [10,"CB.SC.U4CSE25711","Dudekula Soniya Taslim","Female"],
+      [11,"CB.SC.U4CSE25712","Dwarampudi Kaaran Krishnakanth Reddy","Male"],
+      [12,"CB.SC.U4CSE25713","Gadekarla Heamanth Kumar Reddy","Male"],
+      [13,"CB.SC.U4CSE25714","Gautham Madhu","Male"],
+      [14,"CB.SC.U4CSE25715","Gayatri Subin Nair","Female"],
+      [15,"CB.SC.U4CSE25716","Gokulraja G","Male"],
+      [16,"CB.SC.U4CSE25717","Gunda Praneeth","Male"],
+      [17,"CB.SC.U4CSE25718","Harnish Karthic U","Male"],
+      [18,"CB.SC.U4CSE25719","Jiya P","Female"],
+      [19,"CB.SC.U4CSE25720","Joel U Chunkath","Male"],
+      [20,"CB.SC.U4CSE25721","Katasani Anil Kumar Reddy","Male"],
+      [21,"CB.SC.U4CSE25722","Kulkarni Sathwik","Male"],
+      [22,"CB.SC.U4CSE25723","Kusani Vijaya Sai Pranavi","Female"],
+      [23,"CB.SC.U4CSE25724","Lakshmi Nandana B","Female"],
+      [24,"CB.SC.U4CSE25725","M Jahnavi","Female"],
+      [25,"CB.SC.U4CSE25726","Mahashivanee M","Female"],
+      [26,"CB.SC.U4CSE25727","Meera Sajiv","Female"],
+      [27,"CB.SC.U4CSE25728","Monish Murugavel","Male"],
+      [28,"CB.SC.U4CSE25729","Muhammed Nihadh Y","Male"],
+      [29,"CB.SC.U4CSE25730","Muhil Prithivi M","Male"],
+      [30,"CB.SC.U4CSE25731","Muppalla Rishvita","Female"],
+      [31,"CB.SC.U4CSE25732","Nadipalli Bhuvan Aditya Vithesh","Male"],
+      [32,"CB.SC.U4CSE25733","Nandhana Mangalath Menon","Female"],
+      [33,"CB.SC.U4CSE25734","Navikesh S","Male"],
+      [34,"CB.SC.U4CSE25735","Nekkanti Sai Sameera Ram","Female"],
+      [35,"CB.SC.U4CSE25736","Nitin Krishna S M","Male"],
+      [36,"CB.SC.U4CSE25737","P Dheva Dharshan","Male"],
+      [37,"CB.SC.U4CSE25738","P G Rohit","Male"],
+      [38,"CB.SC.U4CSE25741","Prasanth P Pillai","Male"],
+      [39,"CB.SC.U4CSE25742","R Vishal","Male"],
+      [40,"CB.SC.U4CSE25744","Rehan S V","Male"],
+      [41,"CB.SC.U4CSE25745","Rithanya Devi P V","Female"],
+      [42,"CB.SC.U4CSE25746","Rithikeswaran M","Male"],
+      [43,"CB.SC.U4CSE25747","Rohith V S","Male"],
+      [44,"CB.SC.U4CSE25748","Ronald Rick Y","Male"],
+      [45,"CB.SC.U4CSE25749","Sai Ganesan Ramanan","Male"],
+      [46,"CB.SC.U4CSE25750","Santhosh Kumar R","Male"],
+      [47,"CB.SC.U4CSE25751","Shivaditya S S","Male"],
+      [48,"CB.SC.U4CSE25752","Shivani B","Female"],
+      [49,"CB.SC.U4CSE25753","Siddharth Reddy Chowdavaram","Male"],
+      [50,"CB.SC.U4CSE25754","Sirikonda Nayan Sai","Male"],
+      [51,"CB.SC.U4CSE25755","Siva Vardhan V","Male"],
+      [52,"CB.SC.U4CSE25756","Sowmya R","Female"],
+      [53,"CB.SC.U4CSE25757","Sreehari S","Male"],
+      [54,"CB.SC.U4CSE25758","Sreya R Sunil","Female"],
+      [55,"CB.SC.U4CSE25759","Suryadevara Sandeep","Male"],
+      [56,"CB.SC.U4CSE25760","Tippani Sasi Vardhan","Male"],
+      [57,"CB.SC.U4CSE25761","Tuttagunta Naga Syama Rohit","Male"],
+      [58,"CB.SC.U4CSE25762","Vyamsani Sai Vishvas","Male"],
+      [59,"CB.SC.U4CSE25763","Sudharshan K","Male"],
+      [60,"CB.SC.U4CSE25764","C Sakthi Sudhan","Male"],
+      [61,"CB.SC.U4CSE25765","Palati Ayyappa Satyanarayana","Male"],
+    ]
+  },
+  B: {
+    label: "Section B",
+    lsKey: "cse25B_attendance",
+    students: [
+      [1,"CB.SC.U4CSE25101","A K Sri Harinath","Male"],
+      [2,"CB.SC.U4CSE25102","Aadi U R","Male"],
+      [3,"CB.SC.U4CSE25103","Abhijith S","Male"],
+      [4,"CB.SC.U4CSE25104","Abisha Gainsy S","Female"],
+      [5,"CB.SC.U4CSE25105","Anagani Harini","Female"],
+      [6,"CB.SC.U4CSE25106","Antrinya Tamilmozhi S","Female"],
+      [7,"CB.SC.U4CSE25107","Arpit Kumar","Male"],
+      [8,"CB.SC.U4CSE25108","B Lasya","Female"],
+      [9,"CB.SC.U4CSE25109","Balasubramani Sandham Loganathan","Male"],
+      [10,"CB.SC.U4CSE25110","Bellamkonda Sriram Hari Charan","Male"],
+      [11,"CB.SC.U4CSE25113","Chintala Sai Krishna","Male"],
+      [12,"CB.SC.U4CSE25115","Devesh Pillai","Male"],
+      [13,"CB.SC.U4CSE25116","Dharshini S","Female"],
+      [14,"CB.SC.U4CSE25117","Gadwala Sai Joshika","Female"],
+      [15,"CB.SC.U4CSE25118","Ganjikunta Sai Neeraj","Male"],
+      [16,"CB.SC.U4CSE25119","Giridharan R","Male"],
+      [17,"CB.SC.U4CSE25120","Gowtham M","Male"],
+      [18,"CB.SC.U4CSE25121","Gurudoddi Srinidhi Reddy","Female"],
+      [19,"CB.SC.U4CSE25122","Harieesh S","Male"],
+      [20,"CB.SC.U4CSE25123","K Sukhesh Varma","Male"],
+      [21,"CB.SC.U4CSE25124","K Vigneshwar","Male"],
+      [22,"CB.SC.U4CSE25125","Kailash S","Male"],
+      [23,"CB.SC.U4CSE25126","Kanimeraka Jaswanth","Male"],
+      [24,"CB.SC.U4CSE25127","Karthik M","Male"],
+      [25,"CB.SC.U4CSE25128","Kavinayaa S K","Female"],
+      [26,"CB.SC.U4CSE25129","Kiruthikvarshan S K","Male"],
+      [27,"CB.SC.U4CSE25130","Komanduru Sai Harshith","Male"],
+      [28,"CB.SC.U4CSE25131","Konuri Kowshik","Male"],
+      [29,"CB.SC.U4CSE25132","Korrapati Sai Govardhan Reddy","Male"],
+      [30,"CB.SC.U4CSE25133","Lakshanya Rajasri D","Female"],
+      [31,"CB.SC.U4CSE25134","Manda Rupa Sri Vyshnavi","Female"],
+      [32,"CB.SC.U4CSE25135","Mithun Senthilkumar","Male"],
+      [33,"CB.SC.U4CSE25136","Narayanasetti Sai Venkata Jathin","Male"],
+      [34,"CB.SC.U4CSE25137","Naren Balaji V","Male"],
+      [35,"CB.SC.U4CSE25138","Nishanth Shekar T","Male"],
+      [36,"CB.SC.U4CSE25139","P Sandeep Reddy","Male"],
+      [37,"CB.SC.U4CSE25140","Pandipati Madan Mohan","Male"],
+      [38,"CB.SC.U4CSE25141","Parthiv R S","Male"],
+      [39,"CB.SC.U4CSE25142","Pranavi Devi R","Female"],
+      [40,"CB.SC.U4CSE25143","Pranesh G","Male"],
+      [41,"CB.SC.U4CSE25144","Praveena K M S","Female"],
+      [42,"CB.SC.U4CSE25145","Rithik S V","Male"],
+      [43,"CB.SC.U4CSE25146","Rithika Goru","Female"],
+      [44,"CB.SC.U4CSE25147","Rohith Singothu","Male"],
+      [45,"CB.SC.U4CSE25148","Rohith Sivakumar","Male"],
+      [46,"CB.SC.U4CSE25149","S Pratheeka","Female"],
+      [47,"CB.SC.U4CSE25150","Sachin S","Male"],
+      [48,"CB.SC.U4CSE25151","Sai Krishna Podila","Male"],
+      [49,"CB.SC.U4CSE25152","Sanjanaa G R","Female"],
+      [50,"CB.SC.U4CSE25153","Satti Konda Reddy","Male"],
+      [51,"CB.SC.U4CSE25154","Shashankh K R","Male"],
+      [52,"CB.SC.U4CSE25155","Shyam Dharsan Soundararajan","Male"],
+      [53,"CB.SC.U4CSE25156","Sobhith Sankar","Male"],
+      [54,"CB.SC.U4CSE25157","T Jeevan","Male"],
+      [55,"CB.SC.U4CSE25158","Tejas Raja M","Male"],
+      [56,"CB.SC.U4CSE25159","Varunselvakumar S","Male"],
+      [57,"CB.SC.U4CSE25160","Vempati Chinmaya Datta","Male"],
+      [58,"CB.SC.U4CSE25161","Vishal R K","Male"],
+      [59,"CB.SC.U4CSE25162","Vishnu S","Male"],
+      [60,"CB.SC.U4CSE25163","Yuvabala S","Male"],
+    ]
+  }
+};
+
+const SCHEDULE = {
+  1: "Monday · Theory  9:40–10:30 am",
+  3: "Wednesday · Theory  11:35 am–12:25 pm",
+  5: "Friday · Lab  8:50–10:30 am  |  Theory  2:05–2:55 pm",
+};
+
+// ─── STATE ──────────────────────────────────────
+let activeSection = "H";
+let dbs = {
+  H: JSON.parse(localStorage.getItem(SECTIONS.H.lsKey) || "{}"),
+  B: JSON.parse(localStorage.getItem(SECTIONS.B.lsKey) || "{}"),
+};
+let currentDate = "";
+let current = {};
+let filterText = "";
+
+// ─── INIT ────────────────────────────────────────
+document.addEventListener("DOMContentLoaded", () => {
+  const dp = document.getElementById("date-picker");
+  const iso = new Date().toISOString().slice(0,10);
+  dp.value = iso;
+  dp.addEventListener("change", () => onDateChange(dp.value));
+  document.getElementById("search").addEventListener("input", e => {
+    filterText = e.target.value.toLowerCase();
+    renderTable();
+  });
+  onDateChange(iso);
+  renderHistory();
+});
+
+// ─── SECTION SWITCH ──────────────────────────────
+function switchSection(sec) {
+  activeSection = sec;
+  document.getElementById("tab-H").classList.toggle("active", sec==="H");
+  document.getElementById("tab-B").classList.toggle("active", sec==="B");
+  document.getElementById("section-label").textContent = SECTIONS[sec].label;
+  document.getElementById("s-total").textContent = SECTIONS[sec].students.length;
+  filterText = "";
+  document.getElementById("search").value = "";
+  onDateChange(currentDate || new Date().toISOString().slice(0,10));
+  renderHistory();
+}
+
+// ─── DATE CHANGE ─────────────────────────────────
+function onDateChange(dateStr) {
+  currentDate = dateStr;
+  const sec = SECTIONS[activeSection];
+  current = dbs[activeSection][dateStr]
+    ? { ...dbs[activeSection][dateStr] }
+    : Object.fromEntries(sec.students.map(s => [s[1], ""]));
+
+  const d = new Date(dateStr + "T00:00:00");
+  const badge = document.getElementById("session-badge");
+  const warn  = document.getElementById("no-class-warn");
+  if (SCHEDULE[d.getDay()]) {
+    badge.textContent = SCHEDULE[d.getDay()];
+    badge.style.display = ""; warn.style.display = "none";
+  } else {
+    badge.style.display = "none"; warn.style.display = "";
+  }
+  renderTable();
+  updateStats();
+}
+
+// ─── TABLE ───────────────────────────────────────
+function renderTable() {
+  const tbody = document.getElementById("student-tbody");
+  tbody.innerHTML = "";
+  const q = filterText;
+  SECTIONS[activeSection].students.forEach(([sno, roll, name, gender]) => {
+    if (q && !name.toLowerCase().includes(q) && !roll.toLowerCase().includes(q)) return;
+    const status = current[roll] || "";
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td style="color:var(--muted);font-size:.78rem">${sno}</td>
+      <td class="roll">${roll}</td>
+      <td class="name">${name}</td>
+      <td class="gender">${gender==="Female"?"♀ F":"♂ M"}</td>
+      <td><div class="att-toggle">
+        <button class="att-btn P ${status==="P"?"active":""}" onclick="setAtt('${roll}','P',this)">P</button>
+        <button class="att-btn A ${status==="A"?"active":""}" onclick="setAtt('${roll}','A',this)">A</button>
+        <button class="att-btn OD ${status==="OD"?"active":""}" onclick="setAtt('${roll}','OD',this)">OD</button>
+      </div></td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+function setAtt(roll, val, btn) {
+  current[roll] = current[roll] === val ? "" : val;
+  const row = btn.closest("tr");
+  row.querySelectorAll(".att-btn").forEach(b =>
+    b.classList.toggle("active", b.classList.contains(current[roll]))
+  );
+  updateStats();
+}
+
+function markAll(val) {
+  SECTIONS[activeSection].students.forEach(s => { current[s[1]] = val; });
+  renderTable(); updateStats();
+}
+
+// ─── STATS ───────────────────────────────────────
+function updateStats() {
+  let p=0,a=0,od=0;
+  Object.values(current).forEach(v => {
+    if(v==="P") p++; else if(v==="A") a++; else if(v==="OD") od++;
+  });
+  document.getElementById("s-present").textContent = p;
+  document.getElementById("s-absent").textContent  = a;
+  document.getElementById("s-od").textContent      = od;
+}
+
+// ─── SAVE ────────────────────────────────────────
+function saveSession() {
+  if (!currentDate) { toast("Please select a date first."); return; }
+  dbs[activeSection][currentDate] = { ...current };
+  localStorage.setItem(SECTIONS[activeSection].lsKey, JSON.stringify(dbs[activeSection]));
+  renderHistory();
+  toast(`✓ Saved ${SECTIONS[activeSection].label} attendance for ${fmtDate(currentDate)}`);
+}
+
+// ─── HISTORY ─────────────────────────────────────
+function renderHistory() {
+  const bar = document.getElementById("history-bar");
+  bar.querySelectorAll(".date-chip").forEach(c => c.remove());
+  const dates = Object.keys(dbs[activeSection]).sort();
+  document.getElementById("no-sessions").style.display = dates.length ? "none" : "";
+  dates.forEach(d => {
+    const chip = document.createElement("span");
+    chip.className = "date-chip" + (d===currentDate?" active":"");
+    chip.innerHTML = `${fmtDate(d)} <span class="del" title="Delete" onclick="deleteSession('${d}',event)">×</span>`;
+    chip.addEventListener("click", () => {
+      document.getElementById("date-picker").value = d;
+      onDateChange(d);
+      document.querySelectorAll(".date-chip").forEach(c=>c.classList.toggle("active",c===chip));
+    });
+    bar.appendChild(chip);
+  });
+}
+
+function deleteSession(d, e) {
+  e.stopPropagation();
+  if (!confirm(`Delete ${SECTIONS[activeSection].label} attendance for ${fmtDate(d)}?`)) return;
+  delete dbs[activeSection][d];
+  localStorage.setItem(SECTIONS[activeSection].lsKey, JSON.stringify(dbs[activeSection]));
+  if (currentDate === d) {
+    current = Object.fromEntries(SECTIONS[activeSection].students.map(s=>[s[1],""]) );
+    renderTable(); updateStats();
+  }
+  renderHistory();
+  toast("Deleted session: " + fmtDate(d));
+}
+
+// ─── EXCEL EXPORT ────────────────────────────────
+function exportExcel() {
+  const hasH = Object.keys(dbs.H).length > 0;
+  const hasB = Object.keys(dbs.B).length > 0;
+  if (!hasH && !hasB) { toast("No saved sessions to export."); return; }
+
+  const wb = XLSX.utils.book_new();
+
+  ["H","B"].forEach(sec => {
+    const db = dbs[sec];
+    const dates = Object.keys(db).sort();
+    if (!dates.length) return;
+    const students = SECTIONS[sec].students;
+
+    // Attendance sheet
+    const header = ["S. No.","Roll Number","Name","Gender",...dates.map(fmtDate)];
+    const rows = [header];
+    students.forEach(([sno,roll,name,gender]) => {
+      const row = [sno,roll,name,gender,...dates.map(d=>db[d][roll]||"–")];
+      rows.push(row);
+    });
+    rows.push([]);
+    rows.push(["","","PRESENT COUNT","",...dates.map(d=>Object.values(db[d]).filter(v=>v==="P").length)]);
+    rows.push(["","","ABSENT COUNT","", ...dates.map(d=>Object.values(db[d]).filter(v=>v==="A").length)]);
+    rows.push(["","","OD COUNT","",    ...dates.map(d=>Object.values(db[d]).filter(v=>v==="OD").length)]);
+
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols'] = [{wch:6},{wch:22},{wch:38},{wch:9},...dates.map(()=>({wch:14}))];
+    XLSX.utils.book_append_sheet(wb, ws, `Sec ${sec} - Attendance`);
+
+    // Summary sheet
+    const sh = ["S. No.","Roll Number","Name","Gender","Classes Held","Present","Absent","OD","% Attendance"];
+    const sr = [sh];
+    students.forEach(([sno,roll,name,gender])=>{
+      let p=0,a=0,od=0;
+      dates.forEach(d=>{ const v=db[d][roll]||""; if(v==="P")p++; else if(v==="A")a++; else if(v==="OD")od++; });
+      sr.push([sno,roll,name,gender,dates.length,p,a,od, dates.length?((p/dates.length)*100).toFixed(1)+"%":"–"]);
+    });
+    const ws2 = XLSX.utils.aoa_to_sheet(sr);
+    ws2['!cols'] = [{wch:6},{wch:22},{wch:38},{wch:9},{wch:13},{wch:9},{wch:9},{wch:6},{wch:14}];
+    XLSX.utils.book_append_sheet(wb, ws2, `Sec ${sec} - Summary`);
+  });
+
+  XLSX.writeFile(wb, "Attendance_CB_SC_U4CSE25.xlsx");
+  toast("📥 Excel exported — all sections included!");
+}
+
+// ─── UTILS ───────────────────────────────────────
+function fmtDate(iso) {
+  const [y,m,d] = iso.split("-");
+  const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const days   = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+  return `${days[new Date(iso+"T00:00:00").getDay()]} ${d}-${months[m-1]}-${y}`;
+}
+let _tt;
+function toast(msg) {
+  const t = document.getElementById("toast");
+  t.textContent = msg; t.classList.add("show");
+  clearTimeout(_tt); _tt = setTimeout(()=>t.classList.remove("show"), 2800);
+}
+</script>
+</body>
+</html>
